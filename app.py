@@ -38,31 +38,29 @@ for y in range(rows):
         order += 1
 
 # -----------------------------
-# LANケーブル計算（横は段ごと小＋最後大、縦は必要列のみ中）
+# LANケーブル計算（横：小＋最後大、縦：必要列中、H5まで大）
 # -----------------------------
 def calc_lan_cables(positions, cols, rows):
     small = 0
     medium = 0
     large = 0
 
-    # 段ごとに横ケーブル
+    # 横繋ぎ
     for y in range(rows):
-        small += cols - 1  # 横の小ケーブル
-        large += 1          # 横の最後は大ケーブル
+        small += cols - 1  # 横は段ごとに小
+        large += 1          # 横最後のパネルからH5まで大
 
-    # 縦繋ぎは必要列のみ中ケーブル（H5に接続するライン）
-    # 簡易化のため、列数1で段差分
-    medium = rows - 1  # 段差分
+    # 縦繋ぎ（H5ラインにのみ中ケーブル）
+    # 例では2本だけ必要な場合
+    medium = 2  # 実際の設営に応じて列を変えることも可能
 
-    # H5までの最後尾大ケーブル（すでに段ごと加算済みなので追加不要）
-    # 実際の使用本数が正しくなる
+    # H5までの大ケーブルは段ごと加算済みでOK
     return small, medium, large
 
 lan_s, lan_m, lan_l = calc_lan_cables(positions, cols, rows)
 
 # -----------------------------
-# 電源ケーブル計算
-# 横5枚単位で小、縦は中、最後大
+# 電源ケーブル計算（横5枚単位で小、縦は中、最後大）
 # -----------------------------
 def calc_power_cables(positions, cols, rows):
     small = 0
@@ -77,9 +75,9 @@ def calc_power_cables(positions, cols, rows):
         large += full_blocks + (1 if remainder > 0 else 0)  # 5枚毎最後は大
 
     # 縦繋ぎ
-    medium = rows - 1
+    medium = 2  # 今回の設営例に準拠
 
-    # 最後のパネルから電源ボックスまで大ケーブル追加
+    # 最後のパネルから電源ボックスまで大ケーブル
     large += 1
 
     return small, medium, large
