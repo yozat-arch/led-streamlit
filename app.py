@@ -9,16 +9,16 @@ st.title("LED 配置シミュレーター（縦長パネル・現場完全版）
 # -----------------------------
 # パラメータ入力
 # -----------------------------
-cols = st.number_input("横のLED枚数", min_value=1, max_value=50, value=30)
-rows = st.number_input("縦のLED枚数（最大4）", min_value=1, max_value=4, value=3)
+cols = st.number_input("横のLED枚数", min_value=1, max_value=50, value=10)
+rows = st.number_input("縦のLED枚数（最大4）", min_value=1, max_value=4, value=4)
 show_numbers = st.checkbox("番号を表示する", value=True)
 scale = st.slider("図の拡大倍率", 0.5, 2.0, 1.0)
 
 # -----------------------------
 # パネルサイズ（縦長）
 # -----------------------------
-PANEL_W = 0.6 * scale  # 横
-PANEL_H = 1.0 * scale  # 縦
+PANEL_W = 0.6 * scale
+PANEL_H = 1.0 * scale
 font_size = max(6, int(12 - cols // 5))
 
 # -----------------------------
@@ -32,77 +32,56 @@ for y in range(rows):
         positions.append({
             "order": order,
             "x": x,
-            "y": rows - 1 - y,  # 上段0に
-            "lan": (order - 1) // 11 + 1,
-            "power": (order - 1) // 5 + 1,
+            "y": rows - 1 - y,
             "row": y
         })
         order += 1
 
 # -----------------------------
-# LANケーブル計算
+# LANケーブル計算（横は段ごと小＋最後大、縦は必要列のみ中）
 # -----------------------------
 def calc_lan_cables(positions, cols, rows):
     small = 0
     medium = 0
     large = 0
 
-    # 2Dグリッド化
-    grid = [[None]*cols for _ in range(rows)]
-    for p in positions:
-        grid[p["row"]][p["x"]] = p
-
+    # 段ごとに横ケーブル
     for y in range(rows):
-        for x in range(cols):
-            p = grid[y][x]
-            if not p:
-                continue
-            # 横接続
-            if x < cols - 1 and grid[y][x+1]:
-                small += 1
-            # 縦接続
-            if y < rows - 1 and grid[y+1][x]:
-                medium += 1
+        small += cols - 1  # 横の小ケーブル
+        large += 1          # 横の最後は大ケーブル
 
-    # H5までの大ケーブル
-    large = 1
+    # 縦繋ぎは必要列のみ中ケーブル（H5に接続するライン）
+    # 簡易化のため、列数1で段差分
+    medium = rows - 1  # 段差分
+
+    # H5までの最後尾大ケーブル（すでに段ごと加算済みなので追加不要）
+    # 実際の使用本数が正しくなる
     return small, medium, large
 
 lan_s, lan_m, lan_l = calc_lan_cables(positions, cols, rows)
 
 # -----------------------------
 # 電源ケーブル計算
-# 横：5枚単位
-# 縦：中ケーブル
-# 最後：大ケーブル
+# 横5枚単位で小、縦は中、最後大
 # -----------------------------
 def calc_power_cables(positions, cols, rows):
     small = 0
     medium = 0
     large = 0
 
-    grid = [[None]*cols for _ in range(rows)]
-    for p in positions:
-        grid[p["row"]][p["x"]] = p
-
+    # 横繋ぎ
     for y in range(rows):
-        for x in range(cols):
-            p = grid[y][x]
-            if not p:
-                continue
-            # 横繋ぎ
-            if x < cols - 1 and grid[y][x+1]:
-                # 5枚単位で最後は大ケーブル
-                if (p["order"] % 5) == 0:
-                    large += 1
-                else:
-                    small += 1
-            # 縦繋ぎ
-            if y < rows - 1 and grid[y+1][x]:
-                medium += 1
+        full_blocks = cols // 5
+        remainder = cols % 5
+        small += full_blocks * 4 + max(0, remainder - 1)  # 横5枚単位で小4本
+        large += full_blocks + (1 if remainder > 0 else 0)  # 5枚毎最後は大
 
-    # 最後のパネルから電源ボックスまで大ケーブル
+    # 縦繋ぎ
+    medium = rows - 1
+
+    # 最後のパネルから電源ボックスまで大ケーブル追加
     large += 1
+
     return small, medium, large
 
 p_s, p_m, p_l = calc_power_cables(positions, cols, rows)
@@ -113,18 +92,16 @@ p_s, p_m, p_l = calc_power_cables(positions, cols, rows)
 def draw_figure(positions, kind="LAN"):
     if kind == "LAN":
         colors = ["#E3F2FD","#E8F5E9","#F3E5F5","#FFFDE7","#FCE4EC","#E0F2F1"]
-        key = "lan"
         subheader = "LAN 配線図"
     else:
         colors = ["#FFCDD2","#F8BBD0","#E1BEE7","#D1C4E9","#C5CAE9"]
-        key = "power"
         subheader = "電源 配線図"
 
     st.subheader(subheader)
     fig, ax = plt.subplots(figsize=(cols*0.5*scale, rows*0.8*scale))
 
-    for p in positions:
-        color = colors[(p[key]-1) % len(colors)]
+    for idx, p in enumerate(positions):
+        color = colors[idx % len(colors)]
         ax.add_patch(
             plt.Rectangle(
                 (p["x"]*PANEL_W, p["y"]*PANEL_H),
@@ -138,7 +115,7 @@ def draw_figure(positions, kind="LAN"):
             ax.text(
                 p["x"]*PANEL_W + PANEL_W/2,
                 p["y"]*PANEL_H + PANEL_H/2,
-                f'{p["order"]}\n{key.upper()}{p[key]}',
+                f'{p["order"]}',
                 ha="center",
                 va="center",
                 fontsize=font_size,
