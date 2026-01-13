@@ -135,3 +135,33 @@ lan_connections = generate_serpentine_connections(cols, rows)
 for c in lan_connections:
     st.write(f'{c["from"]} -> {c["to"]} ({c["dir"]})')
 
+
+def calc_lan_cables(connections, rows):
+    small = 0
+    medium = 0
+    large = 0
+
+    # パネル同士
+    for c in connections:
+        if c["dir"] == "H":
+            small += 1
+        elif c["dir"] == "V":
+            medium += 1
+
+    # H5への大ケーブル（系統数）
+    large = rows - 1
+
+    return {
+        "small": small,
+        "medium": medium,
+        "large": large
+    }
+
+
+st.subheader("LANケーブル本数")
+
+lan_counts = calc_lan_cables(lan_connections, rows)
+
+st.write(f"小ケーブル: {lan_counts['small']} 本")
+st.write(f"中ケーブル: {lan_counts['medium']} 本")
+st.write(f"大ケーブル: {lan_counts['large']} 本")
