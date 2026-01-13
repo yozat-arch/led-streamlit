@@ -120,3 +120,18 @@ def generate_serpentine_connections(cols, rows):
             })
 
     return connections
+
+
+
+
+#---------------
+# 確認入力
+#---------------
+
+st.subheader("接続リスト（デバッグ表示）")
+
+lan_connections = generate_serpentine_connections(cols, rows)
+
+for c in lan_connections:
+    st.write(f'{c["from"]} -> {c["to"]} ({c["dir"]})')
+
