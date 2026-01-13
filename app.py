@@ -76,3 +76,47 @@ def draw_figure(title):
 # -----------------------------
 draw_figure("LAN 配線図（仮）")
 draw_figure("電源 配線図（仮）")
+
+
+def generate_serpentine_connections(cols, rows):
+    """
+    蛇行順でパネル同士の接続リストを生成する
+    戻り値: list of dict
+    """
+    connections = []
+
+    panel_id = lambda r, c: r * cols + c + 1
+
+    for r in range(rows):
+        if r % 2 == 0:
+            col_range = range(cols)
+        else:
+            col_range = range(cols - 1, -1, -1)
+
+        prev_panel = None
+
+        for c in col_range:
+            current = panel_id(r, c)
+
+            # 横接続
+            if prev_panel is not None:
+                connections.append({
+                    "from": prev_panel,
+                    "to": current,
+                    "dir": "H"
+                })
+
+            prev_panel = current
+
+        # 行の終端で次の行へ（蛇行）
+        if r < rows - 1:
+            next_col = col_range[-1]
+            down_panel = panel_id(r + 1, next_col)
+
+            connections.append({
+                "from": prev_panel,
+                "to": down_panel,
+                "dir": "V"
+            })
+
+    return connections
